@@ -181,11 +181,14 @@ async function audioContextInit(
   startButton.disabled = false;
 
   stopButton.onclick = () => {
-    window.audioContext.suspend();
-    stopButton.disabled = true;
-    startButton.disabled = false;
-    window.rtfDiv.style.backgroundColor = 'rgb(240, 240, 240)';
-    window.rtfDiv.innerHTML = '';
+    google.colab.kernel.invokeFunction('notebook.stopStreamingCallback', [])
+        .then(() => {
+          window.audioContext.suspend();
+          stopButton.disabled = true;
+          startButton.disabled = false;
+          window.rtfDiv.style.backgroundColor = 'rgb(240, 240, 240)';
+          window.rtfDiv.innerHTML = '';
+        });
   };
 
   window.startButton = startButton;

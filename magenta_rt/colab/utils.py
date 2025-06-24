@@ -156,6 +156,7 @@ class AudioStreamer:
       num_output_channels: int = 1,
       additional_buffered_samples: int = 0,
       start_streaming_callback: Callable[[], None] | None = None,
+      stop_streaming_callback: Callable[[], None] | None = None,
   ):
     _load_html("static/html/ui.html")
 
@@ -174,6 +175,14 @@ class AudioStreamer:
     colab.output.register_callback(
         "notebook.startStreamingCallback",
         start_streaming_callback,
+    )
+
+    if stop_streaming_callback is None:
+      stop_streaming_callback = lambda: None
+
+    colab.output.register_callback(
+        "notebook.stopStreamingCallback",
+        stop_streaming_callback,
     )
 
     _load_js("static/js/ring_buffer_node.js")
