@@ -15,7 +15,17 @@
 
 """Colab widgets for Magenta RT."""
 
+import base64
+import concurrent.futures
+import functools
+import importlib
+import uuid
 import ipywidgets as ipw
+import numpy as np
+import resampy
+from . import utils
+
+colab = importlib.import_module('google.colab')
 
 
 class Prompt:
@@ -47,7 +57,7 @@ class Prompt:
             flex='16 1 0%',
         ),
     )
-    self.value = ipw.FloatText(
+    self.label = ipw.FloatText(
         value=0,
         disabled=False,
         layout=ipw.Layout(
@@ -55,7 +65,7 @@ class Prompt:
             width='4em',
         ),
     )
-    ipw.link((self.slider, 'value'), (self.value, 'value'))
+    ipw.link((self.slider, 'value'), (self.label, 'value'))
 
   def get_widget(self):
     """Shows the widget in the current cell."""
@@ -63,10 +73,84 @@ class Prompt:
         children=[
             self.text,
             self.slider,
-            self.value,
+            self.label,
         ],
         layout=ipw.Layout(display='flex', width='50em'),
     )
+
+  @property
+  def prompt_value(self):
+    return self.text
+
+
+class AudioPrompt(Prompt):
+  """Audio prompt widget.
+
+  This widget allows to upload an audio file, a slider value and a text value
+  linked to the slider.
+  """
+
+  def __init__(self):
+    super().__init__()
+    utils._load_js('static/js/upload_audio.js')  # pylint: disable=protected-access
+
+    self.upload_button = ipw.Button(
+        value='Upload',
+        description='Upload audio file',
+        layout=ipw.Layout(
+            display='flex',
+            width='auto',
+            flex='16 1 0%',
+        ),
+    )
+    callback_name = f'notebook.uploadAudio/{uuid.uuid4()}'
+
+    self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    colab.output.register_callback(
+        callback_name,
+        functools.partial(self.executor.submit, self.audio_callback),
+    )
+
+    def _on_click(*args, **kwargs):
+      del args, kwargs
+      utils._call_js('uploadAudio', callback_name)  # pylint: disable=protected-access
+
+    self.upload_button.on_click(_on_click)
+    self.value = None
+    self.parameter_callback = None
+
+  def observe(self, callback):
+    self.parameter_callback = callback
+
+  def audio_callback(
+      self, filename: str, audio_data_b64: str, sample_rate: int, **kwargs
+  ):
+    """Callback for audio upload."""
+    del kwargs
+    x = np.frombuffer(base64.b64decode(audio_data_b64), dtype=np.float32)
+    x = x.copy()
+
+    self.upload_button.description = filename
+    audio = resampy.resample(x, sample_rate, 16_000)
+    if self.parameter_callback is None:
+      return
+
+    self.parameter_callback(dict(name='value', new=audio))
+
+  def get_widget(self):
+    """Shows the widget in the current cell."""
+    return ipw.HBox(
+        children=[
+            self.upload_button,
+            self.slider,
+            self.label,
+        ],
+        layout=ipw.Layout(display='flex', width='50em'),
+    )
+
+  @property
+  def prompt_value(self):
+    return self
 
 
 def area(name: str, *childrens: ipw.Widget) -> ipw.Widget:
