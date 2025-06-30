@@ -110,6 +110,12 @@ class SpectroStreamBase(abc.ABC):
     ...
 
   @abc.abstractmethod
+  def _quantize_batch(
+      self, embeddings: BatchAcousticEmbedding
+  ) -> BatchAcousticTokens:
+    ...
+
+  @abc.abstractmethod
   def _reconstruct_batch(
       self, embeddings: BatchAcousticEmbedding
   ) -> BatchAudioSamples:
@@ -154,11 +160,8 @@ class SpectroStreamBase(abc.ABC):
 
     # Tokenize to [B, S, K] int32
     # K = rvq depth
-    result, _ = utils.rvq_quantization(
-        embeddings.reshape(-1, self.config.embedding_dim), self.rvq_codebooks
-    )
-    result = result.reshape(batch_size, expected_num_frames, -1)
-    return result if batch else result[0]
+    tokens = self._quantize_batch(embeddings)
+    return tokens if batch else tokens[0]
 
   def decode(
       self, tokens: AcousticTokens | BatchAcousticTokens
@@ -259,8 +262,8 @@ class SpectroStreamSavedModel(SpectroStreamBase):
     )
 
   @functools.cached_property
-  def _rvq_codebooks(self) -> np.ndarray:
-    quantizer = utils.load_model_cached(
+  def _quantizer(self) -> np.ndarray:
+    return utils.load_model_cached(
         'tf',
         asset.fetch(
             'savedmodels/ssv2_48k_stereo/quantizer',
@@ -268,6 +271,9 @@ class SpectroStreamSavedModel(SpectroStreamBase):
             is_dir=True,
         ),
     )
+
+  @functools.cached_property
+  def _rvq_codebooks(self) -> np.ndarray:
     result = np.zeros(
         (
             self.config.rvq_depth,
@@ -277,12 +283,20 @@ class SpectroStreamSavedModel(SpectroStreamBase):
         dtype=np.float32,
     )
     for i in range(self.config.rvq_depth):
-      var = quantizer._quantizers[i].embeddings  # pylint: disable=protected-access
+      var = self._quantizer._quantizers[i].embeddings  # pylint: disable=protected-access
       result[i] = var.numpy().T
     return result
 
   def _embed_batch(self, samples: BatchAudioSamples) -> BatchAcousticEmbedding:
     return self._encoder(samples).cpu().numpy()
+
+  def _quantize_batch(
+      self, embeddings: BatchAcousticEmbedding
+  ) -> BatchAcousticTokens:
+    tokens, _ = self._quantizer.inference_encoding_with_tf_function(
+        embeddings, num_quantizers=self.config.rvq_depth
+    )
+    return tf.transpose(tokens, (1, 2, 0)).numpy()
 
   def _reconstruct_batch(
       self, embeddings: BatchAcousticEmbedding
@@ -316,6 +330,20 @@ class MockSpectroStream(SpectroStreamBase):
     return np.random.randn(
         samples.shape[0], num_frames, self.config.embedding_dim
     ).astype(np.float32)
+
+  def _quantize_batch(
+      self, embeddings: BatchAcousticEmbedding
+  ) -> BatchAcousticTokens:
+    np.random.seed(0)
+    return np.random.randint(
+        0,
+        self.config.rvq_codebook_size,
+        size=(
+            embeddings.shape[0],
+            embeddings.shape[1],
+            self.config.rvq_depth,
+        ),
+    ).astype(np.int32)
 
   def _reconstruct_batch(
       self, embeddings: BatchAcousticEmbedding
