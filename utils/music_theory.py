@@ -12,8 +12,15 @@ EMOTION_MODIFIERS = { # Defining which interval feels appropriate for each mood
     'hopeful' : [2, 5, 9]
 }
 
-MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11]
-MINOR_SCALE = [0, 2, 3, 5, 7, 8, 10]
+MODES = {
+    'ionian' : [0, 2, 4, 5, 7, 9, 11], # Major
+    'dorian' : [0, 2, 3, 5, 7, 9, 10], 
+    'phrygian' : [0, 1, 3, 5, 7, 8, 10],
+    'lydian' : [0, 2, 4, 6, 7, 9, 11],
+    'mixolydian' : [0, 2, 4, 5, 7, 9, 10],
+    'aeolian' : [0, 2, 3, 5, 7, 8, 10], # Natural Minor
+    'locrian' : [0, 1, 3, 5, 6, 8, 10]
+}
 
 CHORD_FORMULAS = { # Useful for for suggesting Triads or detect them
     'major' : [0, 4, 7,],
@@ -26,6 +33,8 @@ TRIAD_TYPES = {
     "minor" : ['minor', 'diminished', 'major', 'minor', 'minor', 'major', 'major']
 }
 
+DEFAULT_TRIAD_ORDER = ['major', 'minor', 'minor', 'major', 'major', 'minor', 'diminished']
+
 RHYTHM_LIBRARY = {
     'happy' : ['eighth', 'quarter', 'quarter', 'eighth'],
     'sad' : ['half', 'whole', 'rest', 'half'],
@@ -35,26 +44,23 @@ RHYTHM_LIBRARY = {
 }
 
 # Scale Logic
-def build_scales(root: int, scale_type: str) -> list:
-    if scale_type == 'major':
-        intervals = MAJOR_SCALE
-    elif scale_type == 'minor':
-        intervals = MINOR_SCALE
-    else:
-        raise ValueError(f"Unsupported scale type: {scale_type}")
-
+def build_scales(root: int, mode: str) -> list:
+    intervals = MODES.get(mode.lower())
+    if not intervals:
+        raise ValueError(f"Unknown mode: {mode}")
     return [(root + i) % 12 for i in intervals]
 
-def get_scale_notes(root: int, scale_type: str) -> list:
-    return build_scales(root, scale_type)
+def get_scale_notes(root: int, mode: str) -> list:
+    return build_scales(root, mode)
 
 # Chord Logic
 def get_triad(root_note: int, chord_type: str) -> list:
     return [(root_note + interval) % 12 for interval in CHORD_FORMULAS[chord_type]]
 
-def get_possible_triads(key_root: int=60, scale_type: str='major') -> list:
+def get_possible_triads(key_root: int=60, scale_type: str='ionian') -> list:
     scale = build_scales(key_root % 12, scale_type)
     triads = []
+    triad_types = TRIAD_TYPE.get(scale_type, DEFAULT_TRIAD_ORDER)
 
     for i, degree in enumerate(scale):
         chord_type = TRIAD_TYPES[scale_type][i]
@@ -63,7 +69,7 @@ def get_possible_triads(key_root: int=60, scale_type: str='major') -> list:
 
     return triads
 
-def get_seventh_chords(key_root: int, scale_type: str='major') -> list:
+def get_seventh_chords(key_root: int, scale_type: str='ionian') -> list:
     scale = build_scales(key_root, scale_type)
     seventh_chords = []
 

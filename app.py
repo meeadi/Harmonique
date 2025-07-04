@@ -1,7 +1,8 @@
 from flask import Flask, request, jsonify
 from model.suggestor import suggest_notes, suggest_notes_context
-from utils.music_theory import get_possible_triads, get_seventh_chords, get_cadence_chords, get_triad
+from utils.music_theory import get_possible_triads, get_seventh_chords, get_cadence_chords, get_triad, build_scales
 from utils.voice_leading import apply_voice_leading
+from utils.humanisation import humanize_note
 
 app = Flask(__name__)
 
@@ -28,7 +29,7 @@ def suggest_context():
     data = request.get_json()
     recent_notes = data.get('recent_notes', [])
     mood = data.get('mood', 'happy')
-    scale = data.get('scale', 'major')
+    scale = data.get('mode', 'major')
 
     suggestions = suggest_notes_context(recent_notes, mood, scale)
     return jsonify(suggestions)

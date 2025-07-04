@@ -35,3 +35,27 @@ def get_articulation(mood: str) -> str:
         return 'staccato'
     else:
         return 'normal'
+
+def humanize_note(pitch: int, mood: str) -> dict:
+    return {
+        'pitch' : pitch,
+        'velocity' : apply_velocity(mood),
+        'timing_shift' : apply_timing_shift(mood),
+        'articulation' : get_articulation(mood)
+    }
+
+def adjust_octave(pitch: int, mood: str, history: list[int]) -> int:
+    shift = 0
+
+    if mood in ['epic', 'hopeful'] and pitch < 65:
+        shift = 12 # Higher Octave
+    elif mood in ['dark', 'nostalgic'] and pitch > 72:
+        shift = -12 # Lower Octave
+    elif len(history) >= 3:
+        avg = sum(history[-3:]) / 3
+        if pitch > avg + 4:
+            shift = -12
+        else:
+            shift = 12
+
+    return pitch + shift
