@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harmonique</title>
+    <link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Harmonique</h1>
+
+        <div class="controls">
+            <label for="mood">Mood:</label>
+            <select id="mood" name="mood">
+                <option value="happy">Happy</option>
+                <option value="sad">Sad</option>
+                <option value="nostalgic">Nostalgic</option>
+                <option value="tense">Tense</option>
+                <option value="relaxed">Relaxed</option>
+                <option value="epic">Epic</option>
+                <option value="hopeful">Hopeful</option>
+                <option value="dark">Dark</option>
+            </select>
+
+            <label for="mode">Mode:</label>
+            <select id="mode" name="mode">
+                <option value="ionian">Ionian (Major)</option>
+                <option value="dorian">Dorian</option>
+                <option value="phrygian">Phrygian</option>
+                <option value="lydian">Lydian</option>
+                <option value="mixolydian">Mixolydian</option>
+                <option value="aeolian">Aeolian (Minor)</option>
+                <option value="locrian">Locrian</option>
+            </select>
+
+            <button id="suggestBtn">Suggest</button>
+        </div>
+
+        <div class="keyboard" id="keyboard"></div>
+
+        <div class="output">
+            <h3>Suggestions:</h3>
+            <pre id="suggestions"></pre>
+        </div>
+    </div>
+
+    <script type="module">
+        import * as Tone from 'https://cdn.skypack.dev/tone';
+
+        window.Tone = Tone;
+    </script>
+    <script src="static/script.js" defer></script>
+</body>
+</html>

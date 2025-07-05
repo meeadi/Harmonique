@@ -1,16 +1,19 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
+from flask_cors import CORS
+import os
 from model.suggestor import suggest_notes, suggest_notes_context
 from utils.music_theory import get_possible_triads, get_seventh_chords, get_cadence_chords, get_triad, build_scales
 from utils.voice_leading import apply_voice_leading
 from utils.humanisation import humanize_note
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', template_folder='.')
+CORS(app, resources={r"/*": {"origins": "http://localhost:5000"}})
 
 # Home Route
-@app.route('/', methods=['GET'])
+@app.route('/')
 
-def home():
-    return "Piano Genius backend is running!"
+def index():
+    return render_template('static/index.html')
 
 # Suggestion Route
 @app.route('/suggest', methods=['POST'])
@@ -78,6 +81,13 @@ def cadence():
 
     chords = get_cadence_chords(key_root, scale_type)
     return jsonify({'cadence': chords})
+
+# Test Endpoint for Debugging
+@app.route('/ping')
+
+def ping():
+    return jsonify({'message': 'pong'})
+
 
 if __name__ == '__main__':
     app.run(debug=True)
